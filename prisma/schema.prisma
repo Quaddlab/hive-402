@@ -1,0 +1,108 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  engineType = "library"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Profile {
+  stxAddress    String   @id
+  bnsName       String?
+  displayHandle String?
+  geminiKeyEnc  String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  skills        Skill[]  @relation("ProviderSkills")
+  orders        Order[]  @relation("BuyerOrders")
+  reviews       Review[]
+
+  isBanned      Boolean  @default(false)
+  banReason     String?
+  banLogs       BanRecord[]
+}
+
+model BanRecord {
+  id           String   @id @default(cuid())
+  ipHash       String   @unique
+  fingerprint  String?  @unique
+  createdAt    DateTime @default(now())
+
+  profileAddress String
+  profile        Profile @relation(fields: [profileAddress], references: [stxAddress])
+}
+
+model Skill {
+  id              String   @id @default(cuid())
+  title           String
+  description     String
+  priceStx        Float
+  contextUri      String   // Storage link for raw intelligence
+  category        String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  providerAddress String
+  provider        Profile  @relation("ProviderSkills", fields: [providerAddress], references: [stxAddress])
+
+  orders          Order[]
+  reviews         Review[]
+  rating          Float    @default(0.0)
+  reviewCount     Int      @default(0)
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int      // 1-5
+  comment   String?
+  createdAt DateTime @default(now())
+
+  userId    String
+  profile   Profile  @relation(fields: [userId], references: [stxAddress])
+
+  skillId   String
+  skill     Skill    @relation(fields: [skillId], references: [id])
+}
+
+model Order {
+  txid          String   @id
+  status        String   // pending | settled | failed
+  amountStx     Float
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  buyerAddress  String
+  buyer         Profile  @relation("BuyerOrders", fields: [buyerAddress], references: [stxAddress])
+
+  skillId       String
+  skill         Skill    @relation(fields: [skillId], references: [id])
+}
+
+model AgentTask {
+  id           String         @id @default(cuid())
+  userId       String
+  status       String         // "pending", "processing", "completed", "failed"
+  input        String         // User's original request
+  output       String?        // Agent's final response
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  messages     AgentMessage[]
+}
+
+model AgentMessage {
+  id           String    @id @default(cuid())
+  taskId       String
+  task         AgentTask @relation(fields: [taskId], references: [id])
+  role         String    // "user" or "assistant"
+  content      String
+  createdAt    DateTime  @default(now())
+}
