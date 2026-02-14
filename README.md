@@ -1,28 +1,64 @@
 # 🐝 Hive-402
 
-**The BNS Specialized Intelligence Protocol**
+**The Decentralized Intelligence Protocol on Stacks**
 
-Hive-402 is an agentic marketplace and specialized AI Lab built on the Stacks blockchain. It enables the creation, ingestion, and monetization of intelligence fragments gated by BNS (Bitcoin Name System) identities.
+Hive-402 is an agentic marketplace and specialized AI Lab built on the Stacks blockchain. It enables the creation, ingestion, and monetization of specialized intelligence fragments, utilizing the **OpenClaw** network for decentralized, asynchronous task processing.
 
 > [!IMPORTANT]
-> **This repository is the x402 Protocol.** It is not a dependency you install; it is the core engine for specialized decentralized intelligence.
+> **Trustless Intelligence:** Hive-402 leverages BNS (Bitcoin Name System) for identity and Clarity smart contracts for settlement, ensuring that intelligence trade is secure and verifiable.
 
-## Technical Core
+## 🚀 Key Improvements & Tech Stack
 
-- **Frontend**: Next.js 16 (Webpack mode) with Framer Motion.
-- **Blockchain**: Multi-node verification via Stacks SDK.
-- **Intelligence**: Gemini Neural Link (Neural ingestion layer).
-- **Database**: Prisma + Supabase for identity and settled order tracking.
+- **Intelligence Layer**: Migrated from centralized providers to **OpenClaw**, enabling a decentralized network of specialized agents.
+- **AI Lab**: A fully asynchronous interface for interacting with intelligence skills, featuring real-time task tracking and webhook-based updates.
+- **Blockchain**: Integrated with Stacks for identity (BNS) and trustless settlement via custom Clarity contracts.
+- **Database**: Stabilized Prisma ORM with PostgreSQL (Supabase) for robust task and profile management.
+- **Frontend**: Premium Next.js 16 (Webpack) experience with Framer Motion, optimized for a sleek, dark-mode aesthetic.
 
-## Getting Started
+## 🛠️ Getting Started
 
-1. **Configure Environment**: Ensure `.env` contains your `DATABASE_URL` and `GEMINI_API_KEY`.
-2. **Setup DB**: `npx prisma db push`
-3. **Launch**: `npm run dev`
+### 1. Configure Environment
 
-## Project Structure
+Ensure your `.env` file contains:
 
-- `src/app/dashboard/lab`: The AI Lab (Neural Link V1.0).
-- `src/lib/sdk`: The core x402 protocol logic.
-- `src/app/api/v1/ingest`: Protocol ingestion endpoint.
-- `src/app/api/chat`: Context-aware neural routing.
+- `DATABASE_URL`: Your PostgreSQL connection string.
+- `BASE_URL`: The local or production URL of your app (e.g., `http://localhost:3000`).
+
+### 2. Setup Database
+
+```bash
+npx prisma generate
+npx prisma db push
+```
+
+### 3. Launch Application
+
+```bash
+npm run dev
+```
+
+### 4. Run Local Agent (Testing)
+
+To simulate a decentralized worker node processing Hive-402 tasks:
+
+```bash
+npx tsx scripts/run-agent.ts
+```
+
+## 📂 Project Architecture
+
+- `src/app/dashboard/lab`: The decentralized AI Lab interface.
+- `src/app/api/openclaw/webhook`: The core protocol bridge for task allocation and ingestion.
+- `scripts/run-agent.ts`: A persistent worker node script for local development and verification.
+- `src/lib/sdk`: The Hive-402 SDK for protocol-level interactions.
+- `prisma/schema.prisma`: Defines the decentralized state models (AgentTask, AgentMessage, Skills).
+
+## 🛡️ Protocol Security
+
+Hive-402 implements a **Trustless Settlement Flow**:
+
+1. User requests a skill.
+2. Funds are locked in a Clarity contract.
+3. OpenClaw agent processes the task and submits results.
+4. Validation occurs on-chain or via cryptographic proof.
+5. Funds are released to the provider.
