@@ -37,9 +37,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify signature
-    // The message signed should be the concatenation of specific fields to prevent replay/tampering
-    // For this implementation, we expect the agent to sign string: `${title}:${priceStx}:${providerAddress}`
     const expectedMessage = `${title}:${priceStx}:${providerAddress}`;
     if (!verifyECDSA(expectedMessage, publicKey, signature)) {
       return NextResponse.json(
@@ -102,9 +99,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // --- End Audit Lite ---
-
-    // Ensure profile exists
     await prisma.profile.upsert({
       where: { stxAddress: providerAddress },
       update: {},

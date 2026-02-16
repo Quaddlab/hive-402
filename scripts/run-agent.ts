@@ -10,24 +10,22 @@ async function runAgentLoop() {
   console.log("🤖 OpenClaw Local Worker Node Starting...");
   console.log(`📡 Connecting to Hive Node at: ${BASE_URL}`);
   console.log(`🆔 Agent ID: ${AGENT_ID}`);
+  console.log("⚠️  Mode: MARKETPLACE-DRIVEN (no built-in intelligence)");
+  console.log("   Will recommend skills for wallet-signed purchase.");
   console.log("--------------------------------------------------");
 
   let isProcessing = false;
 
   setInterval(async () => {
-    if (isProcessing) return; // Don't poll if busy
+    if (isProcessing) return;
 
     try {
-      // 1. Poll for Tasks
-      process.stdout.write("."); // heartbeat
+      process.stdout.write(".");
       const pollRes = await fetch(
         `${BASE_URL}/openclaw/webhook?action=poll_tasks&agentId=${AGENT_ID}`,
       );
 
-      if (!pollRes.ok) {
-        // limit error noise
-        return;
-      }
+      if (!pollRes.ok) return;
 
       const pollData = await pollRes.json();
       const tasks = pollData.tasks || [];
@@ -43,30 +41,72 @@ async function runAgentLoop() {
         console.log("   Waiting for next task...");
       }
     } catch (error) {
-      // Silent fail on connection error to just keep retrying
+      // Silent fail on connection error
     }
   }, POLL_INTERVAL_MS);
 }
 
 async function processTask(task: any) {
-  console.log("   ⚙️  Processing...");
+  console.log("   ⚙️  Agent has NO intelligence. Searching marketplace...");
 
-  // Simulate "Thinking" time
-  await new Promise((resolve) => setTimeout(resolve, 3000));
+  let output: any = {};
 
-  // Generate a mock response based on input
-  let output = `[Processed by OpenClaw] Analysis complete for: "${task.input}". \n   > Insight: This is a verified Hive transaction.\n   > Confidence: 99.8%`;
+  try {
+    // Step 1: Extract keywords
+    const keywords = extractKeywords(task.input);
+    console.log(`   🔍 Search keywords: "${keywords}"`);
 
-  // Custom logic for specific keywords
-  if (task.input.toLowerCase().includes("stacks")) {
-    output =
-      "Stacks (STX) is a Bitcoin Layer for smart contracts. Block height: 134,502. Network: Stable.";
-  } else if (task.input.toLowerCase().includes("price")) {
-    output =
-      "Current market analysis indicates accumulation phase. Support levels holding strong.";
+    // Step 2: Search marketplace
+    const searchRes = await fetch(
+      `${BASE_URL}/skills/search?q=${encodeURIComponent(keywords)}`,
+    );
+    const skills = await searchRes.json();
+
+    if (!Array.isArray(skills) || skills.length === 0) {
+      // No skills found
+      output = {
+        type: "no_skills_found",
+        text: `I searched the Hive Marketplace for "${keywords}" but found no matching intelligence packs.\n\n💡 Upload a relevant skill to the marketplace so I can learn!`,
+      };
+      console.log("   ❌ No matching skills found.");
+    } else {
+      // Found skills! Return as a recommendation (NOT auto-purchase)
+      const bestMatch = skills[0];
+      console.log(
+        `   ✅ Found ${skills.length} skill(s). Recommending: "${bestMatch.title}"`,
+      );
+      console.log(`   💰 Price: ${bestMatch.priceStx} STX`);
+      console.log(`   📤 Sending recommendation to UI for wallet approval...`);
+
+      // Return structured data so the UI can render a purchase card
+      output = {
+        type: "skill_recommendation",
+        text: `I found a matching intelligence pack on the marketplace. Purchase it to unlock the answer.`,
+        skill: {
+          id: bestMatch.id,
+          title: bestMatch.title,
+          description: bestMatch.description,
+          priceStx: bestMatch.priceStx,
+          category: bestMatch.category,
+          providerAddress: bestMatch.providerAddress,
+        },
+        allResults: skills.slice(0, 3).map((s: any) => ({
+          id: s.id,
+          title: s.title,
+          priceStx: s.priceStx,
+          category: s.category,
+        })),
+      };
+    }
+  } catch (error: any) {
+    console.error("   ❌ Marketplace error:", error.message);
+    output = {
+      type: "error",
+      text: `Error accessing the Hive Marketplace: ${error.message}`,
+    };
   }
 
-  // Submit Result
+  // Submit result
   try {
     const completeRes = await fetch(`${BASE_URL}/openclaw/webhook`, {
       method: "POST",
@@ -79,20 +119,127 @@ async function processTask(task: any) {
         payload: {
           taskId: task.id,
           status: "completed",
-          output: output,
+          output: JSON.stringify(output),
         },
       }),
     });
 
     const result = await completeRes.json();
     if (result.success) {
-      console.log("   ✅ Result Submitted Successfully!");
+      console.log("   ✅ Recommendation sent to UI!");
     } else {
-      console.error("   ❌ Failed to submit result:", result);
+      console.error("   ❌ Failed to submit:", result);
     }
   } catch (err) {
-    console.error("   ❌ Network error submitting result:", err);
+    console.error("   ❌ Network error:", err);
   }
+}
+
+function extractKeywords(input: string): string {
+  const stopWords = new Set([
+    "i",
+    "me",
+    "my",
+    "we",
+    "our",
+    "you",
+    "your",
+    "he",
+    "she",
+    "it",
+    "they",
+    "the",
+    "a",
+    "an",
+    "is",
+    "am",
+    "are",
+    "was",
+    "were",
+    "be",
+    "been",
+    "being",
+    "have",
+    "has",
+    "had",
+    "do",
+    "does",
+    "did",
+    "will",
+    "would",
+    "could",
+    "should",
+    "can",
+    "may",
+    "might",
+    "shall",
+    "need",
+    "want",
+    "help",
+    "please",
+    "with",
+    "for",
+    "to",
+    "of",
+    "in",
+    "on",
+    "at",
+    "by",
+    "from",
+    "about",
+    "into",
+    "through",
+    "just",
+    "also",
+    "so",
+    "but",
+    "and",
+    "or",
+    "if",
+    "then",
+    "that",
+    "this",
+    "what",
+    "which",
+    "who",
+    "how",
+    "when",
+    "where",
+    "why",
+    "all",
+    "each",
+    "every",
+    "both",
+    "few",
+    "some",
+    "any",
+    "no",
+    "not",
+    "only",
+    "very",
+    "really",
+    "much",
+    "more",
+    "most",
+    "like",
+    "get",
+    "got",
+    "make",
+    "know",
+    "think",
+    "say",
+    "tell",
+    "give",
+    "take",
+  ]);
+
+  const words = input
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, "")
+    .split(/\s+/)
+    .filter((word) => word.length > 2 && !stopWords.has(word));
+
+  return words.length > 0 ? words.join(" ") : input.trim();
 }
 
 runAgentLoop();

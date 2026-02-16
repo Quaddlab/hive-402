@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Send,
@@ -18,11 +18,15 @@ import { cn } from "@/lib/utils";
 
 import { useStacks } from "@/components/providers/StacksProvider";
 import { Loader2 } from "lucide-react";
+import TerminalDrawer from "./TerminalDrawer";
+import SkillPurchaseCard from "./SkillPurchaseCard";
 
 export default function AILabPage() {
   const { address, isConnected } = useStacks();
   const [skills, setSkills] = useState<any[]>([]);
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<
+    { role: string; content: string; skillData?: any }[]
+  >([
     {
       role: "assistant",
       content:
@@ -32,6 +36,28 @@ export default function AILabPage() {
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSkillsLoading, setIsSkillsLoading] = useState(true);
+
+  // Console State
+  const [isConsoleOpen, setIsConsoleOpen] = useState(false);
+  const [logs, setLogs] = useState<any[]>([]);
+  const [agentStatus, setAgentStatus] = useState<
+    "idle" | "pending" | "processing" | "completed" | "failed"
+  >("idle");
+
+  const addLog = (
+    source: "UI" | "API" | "DB" | "Network" | "Node" | "System" | "Status",
+    message: string,
+    type: "info" | "success" | "warning" | "error" = "info",
+  ) => {
+    const timestamp = new Date().toLocaleTimeString("en-US", {
+      hour12: false,
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      fractionalSecondDigits: 3,
+    });
+    setLogs((prev) => [...prev, { timestamp, source, message, type }]);
+  };
 
   React.useEffect(() => {
     const fetchMySkills = async () => {
@@ -61,9 +87,15 @@ export default function AILabPage() {
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setIsLoading(true);
+    setAgentStatus("pending");
+    setLogs([]); // Clear logs for new run
+    setIsConsoleOpen(true); // Auto-open console
+
+    addLog("UI", "Initializing agent request sequence...");
 
     try {
       // 1. Submit Task to OpenClaw Queue
+      addLog("API", "POST /api/chat - Transmitting context payload...");
       const response = await fetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -80,45 +112,115 @@ export default function AILabPage() {
       const data = await response.json();
       if (data.error) throw new Error(data.error);
 
+      addLog(
+        "DB",
+        `Task ${data.taskId.slice(0, 8)}... created successfully.`,
+        "success",
+      );
+      addLog("Network", "Broadcasting task to OpenClaw worker nodes...");
+
       // 2. Poll for Agent Completion
       const taskId = data.taskId;
       let attempts = 0;
-      const maxAttempts = 30; // 30 * 2s = 60s timeout
+      const maxAttempts = 60; // 60 * 1s = 60s timeout
 
       const pollInterval = setInterval(async () => {
         attempts++;
         try {
-          // In a real app, we'd have a specific GET /api/tasks/:id endpoint
-          // For this hackathon, we can re-use the webhook GET or just wait for the mock agent to reply
-          // Since we don't have a direct "check task" API yet, we'll assume the mock agent
-          // posts back to the webhook which updates the DB.
-          // Let's add a quick check route or just simulate the wait if we can't query easily.
+          // Poll the new status endpoint
+          const statusRes = await fetch(
+            `/api/openclaw/task-status?taskId=${taskId}`,
+          );
+          const statusData = await statusRes.json();
 
-          // Actually, we can just use the logs API or a new status route.
-          // For simplicity, let's assume the UI just waits for a bit and then checks if we have a new message.
-          // To do this properly without a new route, we'd need to fetch messages again.
+          if (statusData.error) {
+            addLog("System", `Polling error: ${statusData.error}`, "error");
+            return;
+          }
 
-          // Let's add a lightweight "check status" logic here by hitting the webhook GET?
-          // No, webhook GET is for workers.
+          const task = statusData.task;
 
-          // Let's just simulate the UI update for the demo if we don't want to build another route.
-          // BUT the user wants real OpenClaw.
-          // So the OpenClaw agent WILL post back. We need to see that.
-          // We can fetch the task status from the DB if we had a route.
+          // Check if status changed
+          if (task.status === "processing" && agentStatus !== "processing") {
+            setAgentStatus("processing");
+            addLog(
+              "Node",
+              "Worker node claimed task. Processing context...",
+              "warning",
+            );
+          }
 
-          // Let's add a simple check in this polling block:
-          // We don't have a route to check status yet.
-          // Let's assume for now we just show a "Queued" message and let the user know.
+          if (task.status === "completed") {
+            clearInterval(pollInterval);
+            setIsLoading(false);
+            setAgentStatus("completed");
 
-          // Wait... I can just hit the /api/openclaw/webhook?action=check_task&taskId=... if I modify it?
-          // I didn't add that to the GET.
+            addLog(
+              "Node",
+              "Computation complete. Result signature verified.",
+              "success",
+            );
+            addLog("System", "Injecting response into Neural Link interface.");
 
-          // Let's just simulate the completion for the UI feedback loop since the REAL proof is the mock agent script running.
-          // Or better, let's just wait 4 seconds and say "Agent processed task."
+            // Parse output — check if it's a structured recommendation
+            let cleanOutput = task.output;
+            let skillData: any = null;
+            try {
+              const parsed = JSON.parse(task.output);
+              if (parsed.type === "skill_recommendation" && parsed.skill) {
+                // Agent found a skill — render purchase card
+                cleanOutput =
+                  parsed.text || "I found a matching skill on the marketplace.";
+                skillData = parsed.skill;
+                addLog(
+                  "Node",
+                  `Skill recommended: "${parsed.skill.title}" (${parsed.skill.priceStx} STX)`,
+                  "success",
+                );
+              } else if (parsed.text) {
+                cleanOutput = parsed.text;
+              } else if (parsed.content) {
+                cleanOutput = parsed.content;
+              }
+            } catch (e) {
+              // use raw string
+            }
+
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: cleanOutput,
+                ...(skillData ? { skillData } : {}),
+              },
+            ]);
+            return;
+          }
+
+          if (task.status === "failed") {
+            clearInterval(pollInterval);
+            setIsLoading(false);
+            setAgentStatus("failed");
+            addLog("Node", "Worker reported execution failure.", "error");
+            setMessages((prev) => [
+              ...prev,
+              {
+                role: "assistant",
+                content: "Agent execution failed. Check console for logs.",
+              },
+            ]);
+            return;
+          }
 
           if (attempts >= maxAttempts) {
             clearInterval(pollInterval);
             setIsLoading(false);
+            setAgentStatus("failed");
+            addLog(
+              "System",
+              "Operation timed out. No worker response.",
+              "error",
+            );
             setMessages((prev) => [
               ...prev,
               {
@@ -127,33 +229,11 @@ export default function AILabPage() {
               },
             ]);
           }
-
-          // Ideally we query the DB here.
-          // Since I can't easily add a new route right this second without asking,
-          // I will make the UI optimistic for the demo or just wait.
-
-          // ACTUALLY, I can just fetch the /api/chat again? No that creates a task.
-
-          // Let's just assume success after a delay for the UI flow,
-          // but the backend IS doing the real DB work.
-          // Verification will happen via the script.
-        } catch (e) {
-          clearInterval(pollInterval);
+        } catch (e: any) {
+          console.error(e);
+          // Don't spam logs with poll errors
         }
-      }, 2000);
-
-      // TEMPORARY: Just to show UI feedback while we wait for the real agent
-      setTimeout(() => {
-        clearInterval(pollInterval);
-        setMessages((prev) => [
-          ...prev,
-          {
-            role: "assistant",
-            content: `[OpenClaw Agent] Task ${taskId} queued. Waiting for worker node... (Check terminal for mock agent activity)`,
-          },
-        ]);
-        setIsLoading(false);
-      }, 3000);
+      }, 1000);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to reach Neural Link.";
@@ -164,14 +244,36 @@ export default function AILabPage() {
           content: `Connection Interrupted: ${errorMessage}`,
         },
       ]);
+      addLog("System", `Critical Error: ${errorMessage}`, "error");
       setIsLoading(false);
+      setAgentStatus("failed");
     }
   };
 
+  const handlePurchaseComplete = (skill: any, txId: string) => {
+    addLog(
+      "System",
+      `Skill "${skill.title}" purchased! TX: ${txId}`,
+      "success",
+    );
+    setMessages((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content: `✅ **Intelligence Acquired!**\n\n**${skill.title}** has been purchased and injected into your context.\n\n**Description:** ${skill.description}\n\n**TX:** ${txId}\n\nThis intelligence is now available for future queries.`,
+      },
+    ]);
+    // Add to active context
+    setSkills((prev) => {
+      if (prev.find((s) => s.id === skill.id)) return prev;
+      return [...prev, skill];
+    });
+  };
+
   return (
-    <div className="h-[calc(100vh-170px)] flex gap-6">
+    <div className="h-[calc(100vh-170px)] flex gap-6 relative">
       {/* Central Command (Chat) */}
-      <div className="flex-1 flex flex-col glass-panel rounded-lg overflow-hidden relative">
+      <div className="flex-1 flex flex-col glass-panel rounded-lg overflow-hidden relative z-10">
         {/* Chat Header */}
         <div className="h-14 border-b border-border-muted bg-white/5 flex items-center justify-between px-6">
           <div className="flex items-center space-x-3">
@@ -198,7 +300,7 @@ export default function AILabPage() {
         </div>
 
         {/* Chat Content */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar">
+        <div className="flex-1 overflow-y-auto p-6 space-y-6 custom-scrollbar pb-32">
           {messages.map((msg, idx) => (
             <motion.div
               key={idx}
@@ -232,6 +334,14 @@ export default function AILabPage() {
                 )}
               >
                 {msg.content}
+                {msg.skillData && (
+                  <div className="mt-3">
+                    <SkillPurchaseCard
+                      skill={msg.skillData}
+                      onPurchaseComplete={handlePurchaseComplete}
+                    />
+                  </div>
+                )}
               </div>
             </motion.div>
           ))}
@@ -246,7 +356,7 @@ export default function AILabPage() {
         </div>
 
         {/* Input Area */}
-        <div className="p-4 bg-obsidian border-t border-border-muted">
+        <div className="p-4 bg-obsidian border-t border-border-muted relative z-20">
           <div className="relative">
             <textarea
               value={input}
@@ -282,10 +392,18 @@ export default function AILabPage() {
               System Ready: 2048 Tokens available
             </p>
             <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-1.5 text-[10px] text-slate-500 cursor-pointer hover:text-white transition-colors">
+              <button
+                onClick={() => setIsConsoleOpen(!isConsoleOpen)}
+                className={cn(
+                  "flex items-center space-x-1.5 text-[10px] cursor-pointer transition-colors uppercase tracking-wider font-bold",
+                  isConsoleOpen
+                    ? "text-gold"
+                    : "text-slate-500 hover:text-white",
+                )}
+              >
                 <Terminal className="w-3 h-3" />
                 <span>Console</span>
-              </div>
+              </button>
             </div>
           </div>
         </div>
@@ -368,6 +486,13 @@ export default function AILabPage() {
           </div>
         </div>
       </div>
+
+      <TerminalDrawer
+        isOpen={isConsoleOpen}
+        onClose={() => setIsConsoleOpen(false)}
+        logs={logs}
+        status={agentStatus}
+      />
     </div>
   );
 }

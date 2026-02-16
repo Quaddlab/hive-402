@@ -150,7 +150,9 @@ export class Hive402Client {
       broadcastTransaction,
       AnchorMode,
       PostConditionMode,
-      Cl,
+      uintCV,
+      principalCV,
+      stringUtf8CV,
     } = await import("@stacks/transactions");
     const { STACKS_TESTNET } = await import("@stacks/network");
 
@@ -161,9 +163,9 @@ export class Hive402Client {
       contractName: contractInfo.name,
       functionName: contractInfo.functionName,
       functionArgs: [
-        Cl.uint(args.amount),
-        Cl.principal(args.provider),
-        Cl.stringUtf8(args.skillId),
+        uintCV(args.amount),
+        principalCV(args.provider),
+        stringUtf8CV(args.skillId),
       ],
       senderKey: senderKey,
       validateWithAbi: false,

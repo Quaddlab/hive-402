@@ -61,6 +61,16 @@ export async function POST(request: Request) {
       // Direct ingestion logic (simplified version of /api/v1/ingest)
       const { title, description, price, category } = payload;
 
+      // Ensure the provider profile exists (agents can be new)
+      await prisma.profile.upsert({
+        where: { stxAddress: agentId },
+        update: {},
+        create: {
+          stxAddress: agentId,
+          displayHandle: agentId.slice(0, 16),
+        },
+      });
+
       const newSkill = await prisma.skill.create({
         data: {
           title,
