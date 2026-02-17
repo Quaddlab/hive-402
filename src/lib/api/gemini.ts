@@ -11,7 +11,7 @@ export async function generateChatResponse(
     // The account seems to have 0 quota for 'gemini-pro-latest' and 'gemini-2.0-flash'.
     // We will try 'gemini-2.0-flash-lite' which appears in the authorized list and typically has different limits.
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-lite",
+      model: "gemini-2.5-flash-lite",
       systemInstruction: systemInstruction,
     });
 

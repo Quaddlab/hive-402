@@ -20,6 +20,7 @@ import { useStacks } from "@/components/providers/StacksProvider";
 import { Loader2 } from "lucide-react";
 import TerminalDrawer from "./TerminalDrawer";
 import SkillPurchaseCard from "./SkillPurchaseCard";
+import MarkdownRenderer from "@/components/MarkdownRenderer";
 
 export default function AILabPage() {
   const { address, isConnected } = useStacks();
@@ -119,39 +120,34 @@ export default function AILabPage() {
       );
       addLog("Network", "Broadcasting task to OpenClaw worker nodes...");
 
-      // 2. Poll for Agent Completion
+      // 2. Poll for Agent Completion using recursive setTimeout (no race conditions)
       const taskId = data.taskId;
       let attempts = 0;
-      const maxAttempts = 60; // 60 * 1s = 60s timeout
+      const maxAttempts = 60;
+      let cancelled = false;
 
-      const pollInterval = setInterval(async () => {
+      const pollOnce = async () => {
+        if (cancelled) return;
         attempts++;
+
         try {
-          // Poll the new status endpoint
           const statusRes = await fetch(
             `/api/openclaw/task-status?taskId=${taskId}`,
           );
           const statusData = await statusRes.json();
 
+          if (cancelled) return; // Check again after await
+
           if (statusData.error) {
             addLog("System", `Polling error: ${statusData.error}`, "error");
+            if (!cancelled) setTimeout(pollOnce, 1000);
             return;
           }
 
           const task = statusData.task;
 
-          // Check if status changed
-          if (task.status === "processing" && agentStatus !== "processing") {
-            setAgentStatus("processing");
-            addLog(
-              "Node",
-              "Worker node claimed task. Processing context...",
-              "warning",
-            );
-          }
-
           if (task.status === "completed") {
-            clearInterval(pollInterval);
+            cancelled = true; // Stop all future polls
             setIsLoading(false);
             setAgentStatus("completed");
 
@@ -168,13 +164,22 @@ export default function AILabPage() {
             try {
               const parsed = JSON.parse(task.output);
               if (parsed.type === "skill_recommendation" && parsed.skill) {
-                // Agent found a skill — render purchase card
                 cleanOutput =
-                  parsed.text || "I found a matching skill on the marketplace.";
+                  parsed.text ||
+                  "I found a matching intelligence pack on the marketplace. Purchase it to unlock the answer.";
                 skillData = parsed.skill;
                 addLog(
                   "Node",
                   `Skill recommended: "${parsed.skill.title}" (${parsed.skill.priceStx} STX)`,
+                  "success",
+                );
+              } else if (parsed.type === "no_skills_found") {
+                cleanOutput = parsed.text;
+              } else if (parsed.type === "answer") {
+                cleanOutput = parsed.text;
+                addLog(
+                  "Node",
+                  `Intelligence recalled from acquired skills: ${parsed.sources?.join(", ") || "Active Context"}`,
                   "success",
                 );
               } else if (parsed.text) {
@@ -194,11 +199,11 @@ export default function AILabPage() {
                 ...(skillData ? { skillData } : {}),
               },
             ]);
-            return;
+            return; // Done — no more polling
           }
 
           if (task.status === "failed") {
-            clearInterval(pollInterval);
+            cancelled = true;
             setIsLoading(false);
             setAgentStatus("failed");
             addLog("Node", "Worker reported execution failure.", "error");
@@ -213,7 +218,7 @@ export default function AILabPage() {
           }
 
           if (attempts >= maxAttempts) {
-            clearInterval(pollInterval);
+            cancelled = true;
             setIsLoading(false);
             setAgentStatus("failed");
             addLog(
@@ -228,12 +233,24 @@ export default function AILabPage() {
                 content: "Agent timed out. Please check console.",
               },
             ]);
+            return;
+          }
+
+          // Schedule next poll (only if not resolved)
+          if (!cancelled) {
+            setTimeout(pollOnce, 1000);
           }
         } catch (e: any) {
           console.error(e);
-          // Don't spam logs with poll errors
+          // Retry on network error
+          if (!cancelled && attempts < maxAttempts) {
+            setTimeout(pollOnce, 1000);
+          }
         }
-      }, 1000);
+      };
+
+      // Start first poll after 1 second
+      setTimeout(pollOnce, 1000);
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Failed to reach Neural Link.";
@@ -333,7 +350,11 @@ export default function AILabPage() {
                     : "bg-white/5 border-border-muted text-white",
                 )}
               >
-                {msg.content}
+                {msg.role === "assistant" ? (
+                  <MarkdownRenderer content={msg.content} />
+                ) : (
+                  msg.content
+                )}
                 {msg.skillData && (
                   <div className="mt-3">
                     <SkillPurchaseCard

@@ -8,7 +8,7 @@
  */
 
 const BASE_URL = "http://localhost:3000/api";
-const AGENT_ID = "skill_provider_seed_agent";
+const AGENT_ID = "ST2CY5V39NHDPWSXMW9QDT3HC3GD6Q6XX4CFRK9AG"; // Valid STX testnet address for skill provider
 
 const sampleSkills = [
   {

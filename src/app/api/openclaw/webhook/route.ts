@@ -107,10 +107,22 @@ export async function GET(request: Request) {
           { status: 400 },
         );
 
-      // Find pending tasks for this generic "OpenClaw" worker or specific agent
-      // For this demo, we can have agents claim any pending task or user-specific ones
+      // Auto-expire stale pending tasks (older than 60 seconds)
+      const staleThreshold = new Date(Date.now() - 60 * 1000);
+      await prisma.agentTask.updateMany({
+        where: {
+          status: "pending",
+          createdAt: { lt: staleThreshold },
+        },
+        data: { status: "expired" },
+      });
+
+      // Only find FRESH pending tasks (created within the last 60 seconds)
       const pendingTasks = await prisma.agentTask.findMany({
-        where: { status: "pending" },
+        where: {
+          status: "pending",
+          createdAt: { gte: staleThreshold },
+        },
         orderBy: { createdAt: "asc" },
         take: 1,
       });
@@ -123,7 +135,7 @@ export async function GET(request: Request) {
       const task = pendingTasks[0];
       await prisma.agentTask.update({
         where: { id: task.id },
-        data: { status: "processing" }, // Lock it
+        data: { status: "processing" },
       });
 
       return NextResponse.json({ tasks: [task] });

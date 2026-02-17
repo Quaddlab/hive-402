@@ -123,25 +123,30 @@ export const StacksProvider = ({ children }: { children: React.ReactNode }) => {
     [userSession, updateUserData],
   );
 
+  const disconnectWallet = useCallback(() => {
+    userSession.signUserOut();
+    updateUserData();
+    if (typeof window !== "undefined") window.location.reload();
+  }, [userSession, updateUserData]);
+
+  const contextValue = useMemo(
+    () => ({
+      userSession,
+      userData,
+      isConnected: !!userData,
+      connectWallet: () => {
+        // Defined in useStacks hook
+      },
+      disconnectWallet,
+      address,
+      bnsName,
+    }),
+    [userSession, userData, disconnectWallet, address, bnsName],
+  );
+
   return (
     <Connect authOptions={authOptions as AuthOptions}>
-      <StacksContext.Provider
-        value={{
-          userSession,
-          userData,
-          isConnected: !!userData,
-          connectWallet: () => {
-            // Defined in useStacks hook
-          },
-          disconnectWallet: () => {
-            userSession.signUserOut();
-            updateUserData();
-            if (typeof window !== "undefined") window.location.reload();
-          },
-          address,
-          bnsName,
-        }}
-      >
+      <StacksContext.Provider value={contextValue}>
         {children}
       </StacksContext.Provider>
     </Connect>

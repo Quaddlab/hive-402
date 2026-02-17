@@ -20,7 +20,7 @@ export async function POST(request: Request) {
         amountStx,
         buyerAddress,
         skillId,
-        status: "pending",
+        status: "settled", // Auto-settle for demo purposes (assumes client-side success)
       },
     });
 

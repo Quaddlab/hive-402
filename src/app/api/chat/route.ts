@@ -14,7 +14,36 @@ export async function POST(req: Request) {
       );
     }
 
-    // 1. Create a new Task for the Agent
+    // 1. Fetch installed skills context
+    let taskInput = message;
+    if (skillIds && Array.isArray(skillIds) && skillIds.length > 0) {
+      try {
+        const skills = await prisma.skill.findMany({
+          where: { id: { in: skillIds } },
+          select: {
+            title: true,
+            description: true,
+            category: true,
+            priceStx: true,
+          },
+        });
+
+        if (skills.length > 0) {
+          const contextBlock = skills
+            .map(
+              (s) =>
+                `SKILL: ${s.title} (${s.category})\nDESCRIPTION: ${s.description}`,
+            )
+            .join("\n---\n");
+
+          taskInput = `[INSTALLED CONTEXT]\n${contextBlock}\n\n[USER REQUEST]\n${message}`;
+        }
+      } catch (err) {
+        console.error("Failed to fetch skill context:", err);
+      }
+    }
+
+    // 2. Create a new Task for the Agent
     // Fallback to raw SQL if Prisma Client types are stuck in cache
     const taskId = `task_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     const now = new Date();
@@ -30,7 +59,7 @@ export async function POST(req: Request) {
         data: {
           id: taskId,
           userId: "user_demo",
-          input: message,
+          input: taskInput,
           status: "pending",
           createdAt: now,
           updatedAt: now,
@@ -52,7 +81,7 @@ export async function POST(req: Request) {
         taskId,
         "user_demo",
         "pending",
-        message,
+        taskInput,
         now,
         now,
       );

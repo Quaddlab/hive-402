@@ -22,6 +22,7 @@
     "@stacks/transactions": "^7.3.1",
     "@supabase/supabase-js": "^2.95.3",
     "@types/pg": "^8.16.0",
+    "@types/react-syntax-highlighter": "^15.5.13",
     "@x402/core": "^2.3.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.3.1",
@@ -31,6 +32,9 @@
     "pg": "^8.18.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
+    "react-markdown": "^10.1.0",
+    "react-syntax-highlighter": "^16.1.0",
+    "remark-gfm": "^4.0.1",
     "tailwind-merge": "^3.4.0",
     "x402-stacks": "^2.0.1",
     "zod": "^3.25.76"

@@ -11,18 +11,20 @@ export async function GET(request: Request) {
 
   try {
     // Fetch user profile and their skills
-    const profile = await prisma.profile.findUnique({
-      where: { stxAddress: address },
-      include: {
-        skills: true,
+    // Fetch skills purchased by the user (via Orders)
+    const orders = await prisma.order.findMany({
+      where: {
+        buyerAddress: address,
+        status: "settled",
       },
+      include: {
+        skill: true,
+      },
+      orderBy: { createdAt: "desc" },
     });
 
-    if (!profile) {
-      return NextResponse.json({ skills: [] });
-    }
-
-    return NextResponse.json({ skills: profile.skills });
+    const skills = orders.map((order) => order.skill);
+    return NextResponse.json({ skills });
   } catch (error) {
     console.error("User Skills API Error:", error);
     return NextResponse.json(

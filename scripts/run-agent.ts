@@ -1,17 +1,96 @@
-import { Hive402Client } from "../src/lib/sdk";
+import "dotenv/config";
 
 // Configuration
 const AGENT_ID = "agent_local_worker_01";
-const POLL_INTERVAL_MS = 3000; // Poll every 3 seconds
+const POLL_INTERVAL_MS = 10000;
 const BASE_URL = "http://localhost:3000/api";
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+
+// Gemini REST API — the agent's internal brain
+const GEMINI_MODELS = [
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash",
+  "gemini-2.0-flash-lite",
+];
+
+async function callGeminiREST(
+  model: string,
+  systemPrompt: string,
+  userMessage: string,
+): Promise<string> {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+  const body = {
+    system_instruction: {
+      parts: [{ text: systemPrompt }],
+    },
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: userMessage }],
+      },
+    ],
+    generationConfig: {
+      maxOutputTokens: 2048,
+      temperature: 0.7,
+    },
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Gemini ${model} returned ${res.status}: ${errText}`);
+  }
+
+  const data = await res.json();
+  const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
+  if (!text) throw new Error(`Empty response from ${model}`);
+  return text;
+}
+
+async function generateAnswer(
+  skillContext: string,
+  userQuestion: string,
+): Promise<string> {
+  const systemPrompt = `You are an expert AI assistant powered by the OpenClaw protocol on the Hive-402 network.
+You have been given specialized knowledge through purchased intelligence packs.
+Use ONLY the following acquired intelligence to answer the user's question.
+If asked about code, provide REAL working code examples with proper formatting in markdown code blocks.
+Use \`\`\`clarity for Clarity smart contract code blocks.
+If you're asked to debug, analyze the code carefully and provide fixes.
+Be detailed, technical, and precise. Format your response with markdown.
+
+## YOUR ACQUIRED INTELLIGENCE:
+${skillContext}`;
+
+  // Try each model in order until one works
+  for (const model of GEMINI_MODELS) {
+    try {
+      console.log(`   🤖 Trying model: ${model}...`);
+      const answer = await callGeminiREST(model, systemPrompt, userQuestion);
+      console.log(`   ✅ Success with ${model} (${answer.length} chars)`);
+      return answer;
+    } catch (err: any) {
+      console.error(`   ⚠️  ${model} failed: ${err.message.substring(0, 100)}`);
+    }
+  }
+
+  // All models failed
+  return `⚠️ All AI models are currently unavailable. Your acquired intelligence covers:\n\n${skillContext}\n\nPlease try again in a moment.`;
+}
 
 async function runAgentLoop() {
   console.clear();
   console.log("🤖 OpenClaw Local Worker Node Starting...");
   console.log(`📡 Connecting to Hive Node at: ${BASE_URL}`);
   console.log(`🆔 Agent ID: ${AGENT_ID}`);
-  console.log("⚠️  Mode: MARKETPLACE-DRIVEN (no built-in intelligence)");
-  console.log("   Will recommend skills for wallet-signed purchase.");
+  console.log(`🧠 Mode: CONTEXT-AWARE (Gemini-powered intelligence)`);
+  console.log("   Will answer from acquired skills or recommend new ones.");
   console.log("--------------------------------------------------");
 
   let isProcessing = false;
@@ -33,7 +112,7 @@ async function runAgentLoop() {
       if (tasks.length > 0) {
         isProcessing = true;
         console.log(`\n\n🔔 DETECTED TASK [${tasks[0].id}]`);
-        console.log(`   Input: "${tasks[0].input}"`);
+        console.log(`   Input: "${tasks[0].input.substring(0, 100)}..."`);
 
         await processTask(tasks[0]);
 
@@ -47,13 +126,40 @@ async function runAgentLoop() {
 }
 
 async function processTask(task: any) {
-  console.log("   ⚙️  Agent has NO intelligence. Searching marketplace...");
-
   let output: any = {};
 
+  // Step 0: Check for Installed Context
+  const contextMatch = task.input.match(
+    /\[INSTALLED CONTEXT\]([\s\S]*?)\[USER REQUEST\]/,
+  );
+  const userRequest = contextMatch
+    ? task.input.split("[USER REQUEST]")[1].trim()
+    : task.input;
+
+  if (contextMatch) {
+    const contextText = contextMatch[1].trim();
+    console.log("   🧠 Context detected! Using acquired intelligence...");
+    console.log(`   📖 User Question: "${userRequest}"`);
+
+    // Use Gemini to generate a real, contextual answer
+    const answer = await generateAnswer(contextText, userRequest);
+    console.log("   ✅ Intelligent answer generated from acquired skills!");
+
+    output = {
+      type: "answer",
+      text: answer,
+      sources: ["Acquired Intelligence Pack"],
+    };
+
+    await submitResult(task.id, output);
+    return;
+  }
+
+  console.log("   ⚙️  No relevant context found. Searching marketplace...");
+
+  // Use the clean user request for searching
   try {
-    // Step 1: Extract keywords
-    const keywords = extractKeywords(task.input);
+    const keywords = extractKeywords(userRequest);
     console.log(`   🔍 Search keywords: "${keywords}"`);
 
     // Step 2: Search marketplace
@@ -107,6 +213,10 @@ async function processTask(task: any) {
   }
 
   // Submit result
+  await submitResult(task.id, output);
+}
+
+async function submitResult(taskId: string, output: any) {
   try {
     const completeRes = await fetch(`${BASE_URL}/openclaw/webhook`, {
       method: "POST",
@@ -117,7 +227,7 @@ async function processTask(task: any) {
         publicKey: "mock_pk_local",
         signature: "mock_sig_local",
         payload: {
-          taskId: task.id,
+          taskId: taskId,
           status: "completed",
           output: JSON.stringify(output),
         },
@@ -126,7 +236,7 @@ async function processTask(task: any) {
 
     const result = await completeRes.json();
     if (result.success) {
-      console.log("   ✅ Recommendation sent to UI!");
+      console.log("   ✅ Result sent to UI!");
     } else {
       console.error("   ❌ Failed to submit:", result);
     }

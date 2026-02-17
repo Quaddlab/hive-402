@@ -35,17 +35,36 @@ export default function SkillPurchaseCard({
   const { address, isConnected, connectWallet } = useStacks();
   const [purchasing, setPurchasing] = useState(false);
 
+  const [error, setError] = useState<string | null>(null);
+
   const handlePurchase = async () => {
+    setError(null);
+
     if (!isConnected) {
       connectWallet();
       return;
     }
 
-    if (!address) return;
+    if (!address) {
+      setError("Wallet address not found. Please reconnect.");
+      return;
+    }
+
+    if (!skill.providerAddress) {
+      setError("Skill provider address missing. Cannot process payment.");
+      console.error("Missing providerAddress in skill data:", skill);
+      return;
+    }
+
+    console.log("[Purchase] Starting wallet transaction...", {
+      recipient: skill.providerAddress,
+      amount: Math.floor(skill.priceStx * 1000000).toString(),
+      memo: `HIVE-SKILL-${skill.id.slice(0, 8)}`,
+    });
 
     setPurchasing(true);
     try {
-      await openSTXTransfer({
+      openSTXTransfer({
         recipient: skill.providerAddress,
         amount: Math.floor(skill.priceStx * 1000000).toString(),
         memo: `HIVE-SKILL-${skill.id.slice(0, 8)}`,
@@ -70,8 +89,11 @@ export default function SkillPurchaseCard({
           setPurchasing(false);
         },
       });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Purchase failed:", error);
+      setError(
+        error.message || "Transaction failed. Check your wallet extension.",
+      );
       setPurchasing(false);
     }
   };
@@ -143,6 +165,11 @@ export default function SkillPurchaseCard({
         <p className="text-[10px] text-slate-600 text-center">
           Your wallet will prompt you to sign the transaction
         </p>
+        {error && (
+          <p className="text-[10px] text-red-400 text-center mt-1 font-bold">
+            ⚠️ {error}
+          </p>
+        )}
       </div>
     </motion.div>
   );
