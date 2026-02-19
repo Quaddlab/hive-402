@@ -1,0 +1,65 @@
+{
+  "name": "@hive402/sdk",
+  "version": "0.2.0",
+  "description": "The official SDK for the Hive-402 Decentralized Intelligence Protocol on Stacks. Ingest, publish, and trade AI intelligence fragments on-chain.",
+  "author": "Quaddlab",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Quaddlab/hive-402.git",
+    "directory": "packages/hive-sdk"
+  },
+  "keywords": [
+    "hive-402",
+    "stacks",
+    "blockchain",
+    "ai",
+    "intelligence",
+    "sdk",
+    "openclaw",
+    "clarity",
+    "smart-contracts",
+    "decentralized-ai"
+  ],
+  "main": "./dist/index.js",
+  "module": "./dist/index.mjs",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rimraf dist",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "@stacks/network": ">=7.0.0",
+    "@stacks/transactions": ">=7.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@stacks/network": {
+      "optional": true
+    },
+    "@stacks/transactions": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@stacks/network": "^7.3.1",
+    "@stacks/transactions": "^7.3.1",
+    "tsup": "^8.4.0",
+    "typescript": "^5.7.0",
+    "rimraf": "^6.0.0"
+  }
+}
