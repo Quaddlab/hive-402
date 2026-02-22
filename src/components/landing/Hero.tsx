@@ -7,14 +7,18 @@ import Link from "next/link";
 
 import { useStacks } from "@/components/providers/StacksProvider";
 import { useRouter } from "next/navigation";
+import { MobileWalletModal } from "./MobileWalletModal";
 
 export const Hero = () => {
   const { isConnected, connectWallet } = useStacks();
   const router = useRouter();
+  const [isMobileModalOpen, setIsMobileModalOpen] = React.useState(false);
 
   const handleExplore = () => {
     if (isConnected) {
       router.push("/dashboard");
+    } else if (window.innerWidth < 768) {
+      setIsMobileModalOpen(true);
     } else {
       connectWallet();
     }
@@ -36,7 +40,7 @@ export const Hero = () => {
         <div className="absolute bottom-[10%] right-[10%] w-[500px] h-[500px] bg-blue-500/10 rounded-full blur-[120px]" />
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+      <div className="max-w-7xl mx-auto px-[14px] sm:px-6 lg:px-8 relative">
         <div className="text-center max-w-5xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -52,7 +56,7 @@ export const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.1 }}
-            className="text-5xl md:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]"
+            className="text-[24px] md:text-5xl lg:text-7xl font-extrabold tracking-tight mb-8 leading-[1.1]"
           >
             The Marketplace for <br />
             <span className="text-gradient">AI Agent Intelligence</span>
@@ -62,7 +66,7 @@ export const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
-            className="text-lg md:text-xl text-slate-400 mb-10 leading-relaxed max-w-2xl mx-auto"
+            className="text-[14px] md:text-lg lg:text-xl text-slate-400 mb-10 leading-relaxed max-w-2xl mx-auto"
           >
             Don&apos;t train your agents from scratch. Acquire specialized skill
             packs via P2P knowledge transfer, instantly verifiable through the
@@ -73,18 +77,18 @@ export const Hero = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.3 }}
-            className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-6"
+            className="flex flex-row items-stretch md:items-center justify-center gap-2 sm:gap-6 w-full md:w-auto mx-auto"
           >
             <button
               onClick={handleExplore}
-              className="w-full sm:w-auto px-10 py-4 bg-gold hover:bg-gold/90 text-obsidian rounded-md font-extrabold transition-all shadow-[0_0_30px_rgba(245,158,11,0.3)] active:scale-95 flex items-center justify-center space-x-3 group cursor-pointer"
+              className="flex-1 md:flex-none px-2 py-2.5 md:px-10 md:py-4 bg-gold hover:bg-gold/90 text-obsidian rounded-md text-[12px] md:text-base font-extrabold transition-all shadow-[0_0_30px_rgba(245,158,11,0.3)] active:scale-95 flex items-center justify-center space-x-1.5 md:space-x-3 group cursor-pointer leading-tight whitespace-nowrap"
             >
               <span>Explore Skills</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="w-3.5 h-3.5 md:w-5 md:h-5 group-hover:translate-x-1 transition-transform" />
             </button>
             <button
               onClick={scrollToFeatures}
-              className="w-full sm:w-auto px-10 py-4 bg-white/5 hover:bg-white/10 text-white rounded-md font-bold transition-all border border-white/10 active:scale-95 flex items-center justify-center space-x-3 cursor-pointer"
+              className="flex-1 md:flex-none px-2 py-2.5 md:px-10 md:py-4 bg-white/5 hover:bg-white/10 text-[12px] md:text-base text-white rounded-md font-bold transition-all border border-white/10 active:scale-95 flex items-center justify-center space-x-1.5 md:space-x-3 cursor-pointer leading-tight whitespace-nowrap"
             >
               <span>How it Works</span>
             </button>
@@ -102,8 +106,10 @@ export const Hero = () => {
             <div className="w-12 h-12 rounded-md bg-white/5 flex items-center justify-center mb-6 group-hover:bg-gold/10 transition-colors">
               <Bot className="w-6 h-6 text-gold" />
             </div>
-            <h3 className="text-xl font-bold mb-3">Agent Native</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">
+            <h3 className="text-[16px] md:text-xl font-bold mb-3">
+              Agent Native
+            </h3>
+            <p className="text-slate-400 text-[14px] leading-relaxed">
               Designed specifically for autonomous agents to discover, purchase,
               and ingest knowledge without human intervention.
             </p>
@@ -113,8 +119,10 @@ export const Hero = () => {
             <div className="w-12 h-12 rounded-md bg-white/5 flex items-center justify-center mb-6 group-hover:bg-gold/10 transition-colors">
               <Zap className="w-6 h-6 text-gold" />
             </div>
-            <h3 className="text-xl font-bold mb-3">x402 Verified</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">
+            <h3 className="text-[16px] md:text-xl font-bold mb-3">
+              x402 Verified
+            </h3>
+            <p className="text-slate-400 text-[14px] leading-relaxed">
               Every transaction is gated by the Stacks blockchain, ensuring
               secure and immediate settlement of digital assets.
             </p>
@@ -124,14 +132,20 @@ export const Hero = () => {
             <div className="w-12 h-12 rounded-md bg-white/5 flex items-center justify-center mb-6 group-hover:bg-gold/10 transition-colors">
               <Share2 className="w-6 h-6 text-gold" />
             </div>
-            <h3 className="text-xl font-bold mb-3">Skill Marketplace</h3>
-            <p className="text-slate-400 text-sm leading-relaxed">
+            <h3 className="text-[16px] md:text-xl font-bold mb-3">
+              Skill Marketplace
+            </h3>
+            <p className="text-slate-400 text-[14px] leading-relaxed">
               Access curated context vectors for smart contracts, DeFi analysis,
               and blockchain security audit patterns.
             </p>
           </div>
         </motion.div>
       </div>
+      <MobileWalletModal
+        isOpen={isMobileModalOpen}
+        onClose={() => setIsMobileModalOpen(false)}
+      />
     </section>
   );
 };

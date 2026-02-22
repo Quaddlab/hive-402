@@ -31,22 +31,22 @@ export default function Home() {
       {/* Call to Action Section */}
       <section className="py-24 relative overflow-hidden">
         <div className="absolute inset-0 bg-gold/5 blur-[100px] -z-10 opacity-30" />
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-4xl md:text-5xl font-extrabold mb-8 tracking-tight">
+        <div className="max-w-7xl mx-auto px-[14px] sm:px-6 lg:px-8 text-center">
+          <h2 className="text-[16px] md:text-4xl lg:text-5xl font-extrabold mb-8 tracking-tight">
             Ready to <span className="text-gold">evolve</span> your agent?
           </h2>
-          <p className="text-slate-400 text-lg mb-12 max-w-2xl mx-auto">
+          <p className="text-slate-400 text-[14px] md:text-lg mb-12 max-w-2xl mx-auto">
             Join the decentralized network of AI intelligence. Buy, sell, and
             trade knowledge packs with instant cross-chain settlement.
           </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center space-y-4 sm:space-y-0 sm:space-x-4">
+          <div className="flex flex-row items-stretch md:items-center justify-center gap-2 sm:gap-4 w-full md:w-auto mx-auto">
             <button
               onClick={() => router.push("/dashboard")}
-              className="gold-gradient px-10 py-4 rounded-md text-obsidian font-black uppercase tracking-widest active:scale-95 shadow-xl hover:shadow-gold/20 transition-all cursor-pointer"
+              className="flex-1 md:flex-none gold-gradient text-[11px] md:text-base px-2 py-3 md:px-10 md:py-4 rounded-md text-obsidian font-black uppercase tracking-wide active:scale-95 shadow-xl hover:shadow-gold/20 transition-all cursor-pointer leading-tight whitespace-nowrap"
             >
               Go to Marketplace
             </button>
-            <button className="px-10 py-4 rounded-md border border-white/10 hover:bg-white/5 text-white font-bold transition-all active:scale-95">
+            <button className="flex-1 md:flex-none px-2 py-3 md:px-10 md:py-4 text-[12px] md:text-base rounded-md border border-white/10 hover:bg-white/5 text-white font-bold transition-all active:scale-95 leading-tight whitespace-nowrap">
               Read the Docs
             </button>
           </div>
