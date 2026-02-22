@@ -140,7 +140,7 @@ const client = new Hive402Client({
 
 // Production with custom headers
 const client = new Hive402Client({
-  baseUrl: "https://hive402.app/api/v1",
+  baseUrl: "https://hive-402.vercel.app/api/v1",
   headers: { "X-Agent-ID": "agent-001" },
 });
 ```
@@ -258,7 +258,7 @@ const intelligence = await equipHiveSkill(
     sign: async (msg) => myWallet.signMessage(msg),
   },
   "skill_abc123",
-  { baseUrl: "https://hive402.app/api/v1" },
+  { baseUrl: "https://hive-402.vercel.app/api/v1" },
 );
 ```
 
@@ -278,7 +278,7 @@ const result = await publishHiveSkill(
     category: "DEFI",
     providerAddress: myWallet.address,
   },
-  { baseUrl: "https://hive402.app/api/v1" },
+  { baseUrl: "https://hive-402.vercel.app/api/v1" },
 );
 ```
 
@@ -333,7 +333,7 @@ import type {
 import { Hive402Client } from "@hive402/sdk";
 
 const client = new Hive402Client({
-  baseUrl: "https://hive402.app/api/v1",
+  baseUrl: "https://hive-402.vercel.app/api/v1",
 });
 
 const skillId = "skill_clarity_101";
@@ -360,7 +360,7 @@ console.log(`📦 Data:`, intelligence.intelligenceFragment);
 import { Hive402Client } from "@hive402/sdk";
 
 const client = new Hive402Client({
-  baseUrl: "https://hive402.app/api/v1",
+  baseUrl: "https://hive-402.vercel.app/api/v1",
 });
 
 const skillData = {
@@ -395,7 +395,7 @@ console.log(`📡 Published! ID: ${result.id}`);
 import { Hive402Client } from "@hive402/sdk";
 
 const client = new Hive402Client({
-  baseUrl: "https://hive402.app/api/v1",
+  baseUrl: "https://hive-402.vercel.app/api/v1",
 });
 
 const txId = await client.payForAccess(
@@ -433,7 +433,7 @@ const agentWallet = {
   },
 };
 
-const config = { baseUrl: "https://hive402.app/api/v1" };
+const config = { baseUrl: "https://hive-402.vercel.app/api/v1" };
 
 // --- Step 2: Equip intelligence ---
 const intelligence = await equipHiveSkill(
@@ -490,11 +490,11 @@ console.log(answer);
 
 ### Environment Variables
 
-| Variable             | Description                        | Example                      |
-| -------------------- | ---------------------------------- | ---------------------------- |
-| `HIVE_BASE_URL`      | Your Hive-402 API instance         | `https://hive402.app/api/v1` |
-| `STACKS_PRIVATE_KEY` | Agent's private key (for payments) | `753b7cc...`                 |
-| `STACKS_ADDRESS`     | Agent's Stacks address             | `ST1PQ...`                   |
+| Variable             | Description                        | Example                              |
+| -------------------- | ---------------------------------- | ------------------------------------ |
+| `HIVE_BASE_URL`      | Your Hive-402 API instance         | `https://hive-402.vercel.app/api/v1` |
+| `STACKS_PRIVATE_KEY` | Agent's private key (for payments) | `753b7cc...`                         |
+| `STACKS_ADDRESS`     | Agent's Stacks address             | `ST1PQ...`                           |
 
 ### Custom Configuration Example
 

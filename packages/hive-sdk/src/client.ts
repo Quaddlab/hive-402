@@ -64,7 +64,7 @@ export class Hive402Client {
    *
    * // For production
    * const client = new Hive402Client({
-   *   baseUrl: "https://hive402.app/api/v1",
+   *   baseUrl: "https://hive-402.vercel.app/api/v1",
    *   headers: { "X-Agent-ID": "my-agent-001" },
    * });
    * ```
