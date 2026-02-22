@@ -81,20 +81,11 @@ export const Header = ({ title }: { title: string }) => {
       {/* Actions */}
       <div className="flex items-center space-x-6">
         {/* Network Badge */}
-        <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-widest">
+        {/* Network Badge */}
+        <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded bg-blue-500/10 border border-blue-500/20 text-[10px] font-bold text-blue-400 uppercase tracking-widest mr-4">
           <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
           <span>{t("testnet")}</span>
         </div>
-
-        {/* Global Security Badge */}
-        <div className="flex items-center space-x-1.5 text-slate-400 group cursor-pointer hover:text-white transition-colors">
-          <ShieldCheck className="w-4 h-4 group-hover:text-gold transition-colors" />
-          <span className="text-xs font-bold uppercase tracking-tighter">
-            {t("verified")}
-          </span>
-        </div>
-
-        <div className="h-6 w-px bg-border-muted" />
 
         <div className="flex items-center space-x-4">
           <div

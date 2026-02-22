@@ -4,7 +4,7 @@ import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { vscDarkPlus } from "react-syntax-highlighter/dist/esm/styles/prism";
+import { atomDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 import { Copy, Check, Terminal, FileCode, Layers } from "lucide-react";
 
 function CodeBlock({ language, value }: { language: string; value: string }) {
@@ -17,9 +17,9 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
   };
 
   return (
-    <div className="relative group my-5 rounded-xl overflow-hidden border border-white/10 shadow-2xl bg-[#1e1e1e]">
+    <div className="relative group my-5 rounded-xl overflow-hidden border border-white/5 shadow-2xl bg-[#0d1117] max-w-full">
       {/* Mac-style Window Header */}
-      <div className="flex items-center justify-between px-4 py-2 bg-[#252526] border-b border-white/5">
+      <div className="flex items-center justify-between px-4 py-2 bg-[#161b22] border-b border-white/5">
         <div className="flex items-center gap-2">
           <div className="flex gap-1.5">
             <div className="w-3 h-3 rounded-full bg-[#ff5f56] border border-[#e0443e]" />
@@ -53,10 +53,10 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
       </div>
 
       {/* Code Content */}
-      <div className="relative bg-[#1e1e1e]">
+      <div className="relative bg-[#0d1117] overflow-x-auto max-w-full font-mono text-[13px] custom-scrollbar pb-2">
         <SyntaxHighlighter
           language={language || "text"}
-          style={vscDarkPlus}
+          style={atomDark}
           customStyle={{
             margin: 0,
             padding: "1.5rem",
@@ -67,9 +67,9 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
           }}
           showLineNumbers={true}
           lineNumberStyle={{
-            minWidth: "2.5em",
-            paddingRight: "1.5em",
-            color: "#858585",
+            minWidth: "3em",
+            paddingRight: "1em",
+            color: "#484f58",
             textAlign: "right",
           }}
           wrapLines
@@ -95,7 +95,7 @@ export default function MarkdownRenderer({ content }: { content: string }) {
             if (isInline) {
               return (
                 <code
-                  className="px-1.5 py-0.5 bg-white/10 border border-white/10 rounded-md text-gold text-xs font-mono"
+                  className="px-1.5 py-0.5 bg-white/10 border border-white/10 rounded-md text-slate-200 text-[13px] font-mono"
                   {...props}
                 >
                   {children}
@@ -107,74 +107,92 @@ export default function MarkdownRenderer({ content }: { content: string }) {
           },
           p({ children }) {
             return (
-              <p className="mb-4 last:mb-0 leading-7 text-slate-300">
+              <p className="mb-4 last:mb-0 leading-7 text-slate-200 text-[15px]">
                 {children}
               </p>
             );
           },
           strong({ children }) {
-            return (
-              <strong className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-gold to-amber-200">
-                {children}
-              </strong>
-            );
+            return <strong className="font-bold text-white">{children}</strong>;
           },
           h1({ children }) {
+            const id = Array.isArray(children)
+              ? children
+                  .map((c) => (typeof c === "string" ? c : ""))
+                  .join("")
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+              : String(children)
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-");
             return (
-              <h1 className="text-xl font-black text-white mb-4 mt-6 first:mt-0 flex items-center gap-2">
-                <span className="w-1 h-6 bg-gold rounded-full" />
+              <h1
+                id={id}
+                className="text-xl font-bold text-white mb-4 mt-6 first:mt-0 flex items-center gap-2 scroll-mt-24"
+              >
                 {children}
               </h1>
             );
           },
           h2({ children }) {
+            const id = Array.isArray(children)
+              ? children
+                  .map((c) => (typeof c === "string" ? c : ""))
+                  .join("")
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+              : String(children)
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-");
             return (
-              <h2 className="text-lg font-bold text-white mb-3 mt-5 first:mt-0 flex items-center gap-2 pb-2 border-b border-white/5">
-                <Layers className="w-4 h-4 text-gold" />
+              <h2
+                id={id}
+                className="text-lg font-bold text-white mb-3 mt-5 first:mt-0 flex items-center gap-2 pb-2 border-b border-white/5 scroll-mt-24"
+              >
                 {children}
               </h2>
             );
           },
           h3({ children }) {
+            const id = Array.isArray(children)
+              ? children
+                  .map((c) => (typeof c === "string" ? c : ""))
+                  .join("")
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-")
+              : String(children)
+                  .toLowerCase()
+                  .replace(/[^a-z0-9]+/g, "-");
             return (
-              <h3 className="text-base font-bold text-white/90 mb-2 mt-4 first:mt-0">
+              <h3
+                id={id}
+                className="text-base font-bold text-white mb-2 mt-4 first:mt-0 scroll-mt-24"
+              >
                 {children}
               </h3>
             );
           },
           ul({ children }) {
             return (
-              <ul className="space-y-2 mb-4 ml-1">
-                {React.Children.map(children, (child) => (
-                  <li className="flex gap-2 items-start text-sm text-slate-300 leading-relaxed">
-                    <span className="mt-1.5 w-1.5 h-1.5 rounded-full bg-gold shrink-0" />
-                    <div className="flex-1">{child}</div>
-                  </li>
-                ))}
+              <ul className="list-disc list-outside ml-6 space-y-2 mb-4 text-slate-200 text-[15px] marker:text-slate-500">
+                {children}
               </ul>
             );
           },
           ol({ children }) {
             return (
-              <ol className="list-decimal list-inside space-y-2 mb-4 text-slate-300 text-sm marker:text-gold marker:font-bold">
+              <ol className="list-decimal list-outside ml-6 space-y-2 mb-4 text-slate-200 text-[15px] marker:text-slate-500">
                 {children}
               </ol>
             );
           },
           li({ children }) {
-            // Unordered lists handle their own li rendering above to custom bullet
-            // This is mostly for ordered lists or nested structures
-            return <span>{children}</span>;
+            return <li className="leading-relaxed pl-1">{children}</li>;
           },
           blockquote({ children }) {
             return (
-              <blockquote className="relative p-4 my-4 bg-white/5 rounded-lg border-l-4 border-gold">
-                <div className="absolute top-2 right-2 opacity-10">
-                  <Terminal className="w-8 h-8 text-gold" />
-                </div>
-                <div className="text-slate-300 italic relative z-10">
-                  {children}
-                </div>
+              <blockquote className="p-4 my-4 bg-white/5 rounded-lg border-l-4 border-slate-600">
+                <div className="text-slate-300 italic">{children}</div>
               </blockquote>
             );
           },
@@ -184,7 +202,7 @@ export default function MarkdownRenderer({ content }: { content: string }) {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gold hover:text-amber-300 underline underline-offset-4 decoration-gold/30 hover:decoration-gold transition-all"
+                className="text-white hover:text-slate-200 underline underline-offset-4 decoration-white/30 hover:decoration-white transition-all font-medium"
               >
                 {children}
               </a>
@@ -212,7 +230,7 @@ export default function MarkdownRenderer({ content }: { content: string }) {
           },
           th({ children }) {
             return (
-              <th className="px-4 py-3 font-semibold text-gold uppercase tracking-wider text-xs whitespace-nowrap">
+              <th className="px-4 py-3 font-semibold text-slate-300 uppercase tracking-wider text-xs whitespace-nowrap bg-white/5">
                 {children}
               </th>
             );

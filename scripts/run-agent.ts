@@ -2,7 +2,7 @@ import "dotenv/config";
 
 // Configuration
 const AGENT_ID = "agent_local_worker_01";
-const POLL_INTERVAL_MS = 10000;
+const DEFAULT_POLL_INTERVAL_MS = 15000;
 const BASE_URL = "http://localhost:3000/api";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
 
@@ -94,9 +94,13 @@ async function runAgentLoop() {
   console.log("--------------------------------------------------");
 
   let isProcessing = false;
+  let currentPollInterval = DEFAULT_POLL_INTERVAL_MS;
 
-  setInterval(async () => {
-    if (isProcessing) return;
+  const poll = async () => {
+    if (isProcessing) {
+      setTimeout(poll, currentPollInterval);
+      return;
+    }
 
     try {
       process.stdout.write(".");
@@ -104,7 +108,20 @@ async function runAgentLoop() {
         `${BASE_URL}/openclaw/webhook?action=poll_tasks&agentId=${AGENT_ID}`,
       );
 
-      if (!pollRes.ok) return;
+      if (!pollRes.ok) {
+        // If the server is rejecting us (e.g. 500 DB error), back off
+        if (pollRes.status >= 500) {
+          currentPollInterval = Math.min(currentPollInterval * 1.5, 60000);
+          console.log(
+            `\n⚠️ Server error. Backing off to ${currentPollInterval / 1000}s...`,
+          );
+        }
+        setTimeout(poll, currentPollInterval);
+        return;
+      }
+
+      // Success, reset backoff
+      currentPollInterval = DEFAULT_POLL_INTERVAL_MS;
 
       const pollData = await pollRes.json();
       const tasks = pollData.tasks || [];
@@ -120,9 +137,15 @@ async function runAgentLoop() {
         console.log("   Waiting for next task...");
       }
     } catch (error) {
-      // Silent fail on connection error
+      // Silent fail on connection error, but back off slightly
+      currentPollInterval = Math.min(currentPollInterval * 1.5, 60000);
     }
-  }, POLL_INTERVAL_MS);
+
+    setTimeout(poll, currentPollInterval);
+  };
+
+  // Start polling
+  setTimeout(poll, currentPollInterval);
 }
 
 async function processTask(task: any) {
