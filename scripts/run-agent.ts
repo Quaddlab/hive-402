@@ -65,6 +65,8 @@ Use \`\`\`clarity for Clarity smart contract code blocks.
 If you're asked to debug, analyze the code carefully and provide fixes.
 Be detailed, technical, and precise. Format your response with markdown.
 
+IMPORTANT: If the user's question is NOT covered by your acquired intelligence below, you MUST respond with EXACTLY the text "__NO_MATCH__" and nothing else. Do NOT say "I cannot help" or "my intelligence doesn't cover this". Just respond with "__NO_MATCH__" so the system can search the marketplace for the right skill pack.
+
 ## YOUR ACQUIRED INTELLIGENCE:
 ${skillContext}`;
 
@@ -166,19 +168,31 @@ async function processTask(task: any) {
 
     // Use Gemini to generate a real, contextual answer
     const answer = await generateAnswer(contextText, userRequest);
-    console.log("   ✅ Intelligent answer generated from acquired skills!");
 
-    output = {
-      type: "answer",
-      text: answer,
-      sources: ["Acquired Intelligence Pack"],
-    };
+    // Check if the model says the context doesn't cover this topic
+    if (
+      answer.trim() === "__NO_MATCH__" ||
+      answer.trim().startsWith("__NO_MATCH__")
+    ) {
+      console.log(
+        "   ⚠️ Installed skills don't cover this topic. Searching marketplace...",
+      );
+      // Fall through to marketplace search below
+    } else {
+      console.log("   ✅ Intelligent answer generated from acquired skills!");
 
-    await submitResult(task.id, output);
-    return;
+      output = {
+        type: "answer",
+        text: answer,
+        sources: ["Acquired Intelligence Pack"],
+      };
+
+      await submitResult(task.id, output);
+      return;
+    }
+  } else {
+    console.log("   ⚙️  No relevant context found. Searching marketplace...");
   }
-
-  console.log("   ⚙️  No relevant context found. Searching marketplace...");
 
   // Use the clean user request for searching
   try {
