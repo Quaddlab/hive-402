@@ -5,6 +5,7 @@ const AGENT_ID = "agent_local_worker_01";
 const DEFAULT_POLL_INTERVAL_MS = 15000;
 const BASE_URL = "http://localhost:3000/api";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
+const AGENT_STX_ADDRESS = process.env.AGENT_STX_ADDRESS || "";
 
 // Gemini REST API — the agent's internal brain
 const GEMINI_MODELS = [
@@ -84,6 +85,103 @@ ${skillContext}`;
 
   // All models failed
   return `⚠️ All AI models are currently unavailable. Your acquired intelligence covers:\n\n${skillContext}\n\nPlease try again in a moment.`;
+}
+
+// ===== AUTONOMOUS RESEARCH & PUBLISH =====
+
+interface ResearchResult {
+  title: string;
+  description: string;
+  category: string;
+  complexity: number; // 1-5
+  content: string;
+}
+
+function determinePricing(complexity: number): number {
+  if (complexity <= 2) return 0.5;
+  if (complexity === 3) return 1.5;
+  if (complexity === 4) return 3.0;
+  return 5.0;
+}
+
+async function researchTopic(
+  userQuestion: string,
+): Promise<ResearchResult | null> {
+  const researchPrompt = `You are a world-class researcher and technical writer for the OpenClaw AI Intelligence Network.
+A user asked about a topic that has NO existing skill pack in our marketplace.
+Your job is to DEEPLY RESEARCH this topic and create a comprehensive intelligence brief that can be sold as a skill pack.
+
+IMPORTANT: Respond with ONLY a valid JSON object (no markdown, no code fences, no extra text).
+The JSON must have these exact fields:
+{
+  "title": "A professional, marketplace-ready title for this skill (max 60 chars)",
+  "description": "A detailed 2-3 sentence description of what this intelligence pack covers. Be specific about the topics, techniques, and knowledge included.",
+  "category": "One of: SECURITY, BLOCKCHAIN, DEVELOPMENT, AI, DEVOPS, NETWORKING, DATA, OTHER",
+  "complexity": <number 1-5 where 1=basic intro, 3=intermediate guide, 5=expert-level deep dive>,
+  "content": "The FULL intelligence brief. This should be 500-1500 words of expert-level, actionable technical knowledge. Include concepts, best practices, code examples where applicable, common pitfalls, and real-world advice. Format with markdown headings and bullet points."
+}`;
+
+  for (const model of GEMINI_MODELS) {
+    try {
+      console.log(`   🔬 Researching with ${model}...`);
+      const raw = await callGeminiREST(model, researchPrompt, userQuestion);
+
+      // Clean the response (remove possible markdown code fences)
+      const cleaned = raw
+        .replace(/```json\n?/g, "")
+        .replace(/```\n?/g, "")
+        .trim();
+      const result = JSON.parse(cleaned) as ResearchResult;
+
+      // Validate the structure
+      if (!result.title || !result.description || !result.content) {
+        throw new Error("Missing required fields in research output");
+      }
+
+      console.log(
+        `   ✅ Research complete: "${result.title}" (complexity: ${result.complexity}/5)`,
+      );
+      return result;
+    } catch (err: any) {
+      console.error(
+        `   ⚠️  Research with ${model} failed: ${err.message.substring(0, 100)}`,
+      );
+    }
+  }
+
+  return null;
+}
+
+async function publishSkill(research: ResearchResult): Promise<any | null> {
+  const priceStx = determinePricing(research.complexity);
+
+  try {
+    console.log(`   📤 Publishing to marketplace at ${priceStx} STX...`);
+    const res = await fetch(`${BASE_URL}/skills/agent-publish`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: research.title,
+        description: research.description + "\n\n" + research.content,
+        priceStx: priceStx.toString(),
+        category: research.category,
+        providerAddress: AGENT_STX_ADDRESS,
+        agentId: AGENT_ID,
+      }),
+    });
+
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(`Publish failed: ${res.status} - ${errText}`);
+    }
+
+    const skill = await res.json();
+    console.log(`   ✅ Published! Skill ID: ${skill.id}`);
+    return { ...skill, priceStx };
+  } catch (err: any) {
+    console.error(`   ❌ Publish error: ${err.message}`);
+    return null;
+  }
 }
 
 async function runAgentLoop() {
@@ -206,12 +304,52 @@ async function processTask(task: any) {
     const skills = await searchRes.json();
 
     if (!Array.isArray(skills) || skills.length === 0) {
-      // No skills found
-      output = {
-        type: "no_skills_found",
-        text: `I searched the Hive Marketplace for "${keywords}" but found no matching intelligence packs.\n\n💡 Upload a relevant skill to the marketplace so I can learn!`,
-      };
-      console.log("   ❌ No matching skills found.");
+      // No skills found — AUTONOMOUS RESEARCH & PUBLISH
+      console.log(
+        "   ❌ No matching skills found. Initiating autonomous research...",
+      );
+
+      const research = await researchTopic(userRequest);
+
+      if (research) {
+        const publishedSkill = await publishSkill(research);
+
+        if (publishedSkill) {
+          console.log(
+            `   🎉 Agent autonomously created: "${publishedSkill.title}"`,
+          );
+          output = {
+            type: "skill_recommendation",
+            text: `I couldn't find an existing skill pack, so I **researched this topic and created a new intelligence pack** for you!\n\n🤖 **"${publishedSkill.title}"** is now available on the marketplace.\n\nPurchase it to unlock the full intelligence.`,
+            skill: {
+              id: publishedSkill.id,
+              title: publishedSkill.title,
+              description: research.description,
+              priceStx: publishedSkill.priceStx,
+              category: research.category,
+              providerAddress: AGENT_STX_ADDRESS,
+            },
+            allResults: [
+              {
+                id: publishedSkill.id,
+                title: publishedSkill.title,
+                priceStx: publishedSkill.priceStx,
+                category: research.category,
+              },
+            ],
+          };
+        } else {
+          output = {
+            type: "no_skills_found",
+            text: `I researched "${keywords}" but couldn't publish the skill pack. Please try again.`,
+          };
+        }
+      } else {
+        output = {
+          type: "no_skills_found",
+          text: `I searched the Hive Marketplace for "${keywords}" but found no matching intelligence packs, and my research engine is currently unavailable.\n\n💡 Upload a relevant skill to the marketplace so I can learn!`,
+        };
+      }
     } else {
       // Found skills! Return as a recommendation (NOT auto-purchase)
       const bestMatch = skills[0];

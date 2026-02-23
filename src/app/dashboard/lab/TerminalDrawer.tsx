@@ -49,7 +49,7 @@ export default function TerminalDrawer({
               <span className="text-xs font-bold text-gold uppercase tracking-widest">
                 OpenClaw Console Output
               </span>
-              <div className="h-4 w-[1px] bg-white/10 mx-2" />
+              <div className="h-4 w-px bg-white/10 mx-2" />
               <div className="flex items-center space-x-2">
                 <div
                   className={cn(
